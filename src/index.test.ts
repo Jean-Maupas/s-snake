@@ -1,16 +1,16 @@
-import { describe, it, expect } from 'vitest';
-import { findNumTuple } from './lib/Snake.svelte';
+import { describe, test, expect } from 'vitest';
+import { findNumTuple } from '$lib/Utils';
 
-describe('sum test', () => {
-	it('adds 1 + 2 to equal 3', () => {
-		expect(1 + 2).toBe(3);
+const _DEBUG = false;
+
+describe('Snake Unit Tests', () => {
+
+	test('Find Tuple', () => {
+		expect(findNumTuple([[1,2],[3,4],[5,6]],[9,0])).toBe(false);
+		expect(findNumTuple([[1,2],[3,4],[5,6]],[1,2])).toBe(true);
+		expect(findNumTuple([[1,2],[3,4],[5,6]],[5,6])).toBe(true);
+		expect(findNumTuple([],[5,6])).toBe(false);
+		expect(findNumTuple([],[])).toBe(false);
 	});
-});
 
-test('find tuple', async ({ page }) => {
-	expect(findNumTuple([[1,2],[3,4],[5,6]],[9,0])).toBe(undefined);
-	expect(findNumTuple([[1,2],[3,4],[5,6]],[1,2])).toBe([1,2]);
-	expect(findNumTuple([[1,2],[3,4],[5,6]],[5,6])).toBe([5,6]);
-	expect(findNumTuple([],[5,6])).toBe(undefined);
-	expect(findNumTuple([],[])).toBe(undefined);
 });

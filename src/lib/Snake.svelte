@@ -3,6 +3,14 @@
   // TODO adjust canvas size to be a multiple of STEP
   import { beforeUpdate, onMount, tick } from "svelte";
   import { onDestroy } from 'svelte';
+  import { findNumTuple, getRandomInt } from "./Utils";
+
+  export let die_on_edge = true; // TODO
+  export let pause_allowed = true;
+  export let die_on_self = true; // TODO
+  export let grid = false; // TODO
+  export let snakeLength = 3;
+
 
   // TODO transform to properties
   const KEYS = ["ArrowRight","ArrowLeft","ArrowDown","ArrowUp"];
@@ -10,9 +18,6 @@
   const INIT_KEY = "ArrowRight";
   const STEP = 10;
   const TIMER = 300; // ms
-  const REBOND = false;
-  const PAUSE_ALLOWED = true;
-  const SEFL_ALLOWED = false;
   const BGcolor = "#f1b06c";
 
   let posX = 0;
@@ -29,16 +34,9 @@
   const snake: number[][] = [];
   const food: number[][] = [];
  
-  function getRandomInt(min: number, max: number) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min) + min); // The maximum is exclusive and the minimum is inclusive
-  }
-
 	let canvas : HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
   let width: number, height: number;
-  let snakeLength = 2;
   //$: size = Math.min(width, height);
 
   // setup an interval timer to update the store's value repeatedly over time
@@ -63,38 +61,38 @@
     started = false;
     snake.length=0;
     food.length=0;
-    let key = INIT_KEY;
+    key = INIT_KEY;
   }
 
   // TODO use requestAnimationFrame
-  function start() {
+  export function start() {
     if (!ended && !started && !paused) {
+      initStart();
+      putFood();
+      started = true;
       if (!interval) { // not already running
-        initStart();
-        putFood();
         lastFrame = +new Date,
         interval = setInterval(()=>{
           let now = +new Date, deltaT = now - lastFrame;
           if (deltaT > TIMER) { // advance only after the same time
-            advance();
+            advance(false);
             lastFrame = now;
           }
         }, 16);	// every 16 ms ==> 60 fps 	
-        started = true;
       }
     }
     if (paused) paused = false;
   }
 
-  function clear(event: MouseEvent & { currentTarget: EventTarget & HTMLButtonElement; }) {
+  export function clear() {
     ctx!.clearRect(0,0,width,height);
     started = false;
     ended = false;
     paused = false;
   }
 
-  function pause(){
-    paused = true;
+  export function pause(){
+    if (pause_allowed) paused = true;
   }
 
   // coloryfy the snake and end the process
@@ -108,26 +106,27 @@
       let [x,y] = p
       ctx!.fillRect(x,y,STEP,STEP);     
     });
-    if (interval)
+    if (interval) {
       clearInterval(interval);
-  }
-
-  // return a.every((val, idx) => val === b[idx])
-  // (a[0] == b[0]) && (a[1] == b[1]) 
-  function findNumTuple(arr: number[][], tuple: number[]): boolean {
-    return arr.find((e: number[])=>{
-      return e.every((val, idx) => val === tuple[idx])
-    }) != undefined // TODO: fast search through BS or Maps
+      interval = undefined;
+    }
   }
 
   // test array equality
-  const advance = async () => {
+  const advance = async (forceMove: boolean = false) => {
     if (started && !ended && !paused && (ctx != null)) {
+      //let move = true;
       ctx.fillStyle = "black";
       if (((posX+STEP-1) > width) || (posX < 0) ||
           (posY < 0) || ((posY+STEP-1) > height)) {
         // if (REBOND)   
-        endGame("red");
+        if (die_on_edge) endGame("red");
+        else {
+          if (posX < 0) posX=width-STEP;
+          if (posY < 0) posY=height-STEP;
+          if ((posX+STEP-1) > width) posX=0;
+          if ((posY+STEP-1) > height) posY=0;
+        }
       } else {
         if (findNumTuple(snake,[posX,posY])) {
           endGame("blue");
@@ -148,6 +147,7 @@
             }
           }
           //console.log(snake);
+          //if (move)
           switch (key) {
             case "ArrowLeft": posX -= STEP; break;
             case "ArrowRight": posX += STEP; break;
@@ -176,7 +176,6 @@
     }
   }
 
-
   const onKeyDown = (event: KeyboardEvent) => {
     //if (event.defaultPrevented) return;
 
@@ -184,7 +183,7 @@
     // if (key === 'Escape' || key === 'Esc' || key === 27) {
     if (KEYS_CODES.includes(event.keyCode)) {
       key = event.key;
-      advance();
+      advance(true);
       //console.log(key);
     }
     // event.stopPropagation();
@@ -210,10 +209,7 @@
   <svelte:document on:keydown|preventDefault|stopImmediatePropagation|stopPropagation={onKeyDown} />
   <!-- svelte:window on:keydown={onKeyDown} / -->
   <div class="zone">
-    <button on:click={clear}>Clear</button>
-    <button on:click={pause}>Pause</button>   
-    <button on:click={start}>Start</button>
-    <span class="zone">{key} s={started} e={ended} {posX},{posY} {STEP} {TIMER} {width} {height}</span>
+    <span class="zone">{key} {snakeLength} s={started} e={ended} {posX},{posY} {STEP} {TIMER} {width} {height}</span>
   </div>
   <canvas bind:this={canvas}  
     class="container"
